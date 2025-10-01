@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+  <body>
+    <h3>Google Drive Explorer</h3>
+    <input id="folder" placeholder="Enter folder id" />
+    <button id="btn">List files</button>
+
+    <div id="explorer"></div>
+
+    <script>
+      document.getElementById('btn').addEventListener('click', async () => {
+        const folder = encodeURIComponent(document.getElementById('folder').value.trim());
+        const res = await fetch(`/api/gdrive/list/?folder_id=${folder}`);
+        const data = await res.json();
+
+        const explorer = document.getElementById('explorer');
+        explorer.innerHTML = '';
+
+        if (data.files) {
+          // Build a tree object from flat list
+          const tree = {};
+          data.files.forEach(f => {
+            const parts = f.path.split('/');
+            let current = tree;
+            parts.forEach((part, i) => {
+              if (!current[part]) {
+                current[part] = { __children: {}, __file: null };
+              }
+              if (i === parts.length - 1) {
+                current[part].__file = f; // assign file
+              }
+              current = current[part].__children;
+            });
+          });
+
+          // Recursive render function
+          function renderTree(node) {
+            const ul = document.createElement('ul');
+            for (const [name, info] of Object.entries(node)) {
+              const li = document.createElement('li');
+              if (info.__file) {
+                // It's a file
+                const f = info.__file;
+                li.innerHTML = `<a href="${f.webViewLink || '#'}" target="_blank">${f.name}</a> (${f.mimeType})`;
+              } else {
+                // It's a folder
+                li.textContent = name;
+              }
+
+              if (Object.keys(info.__children).length > 0) {
+                li.appendChild(renderTree(info.__children));
+              }
+
+              ul.appendChild(li);
+            }
+            return ul;
+          }
+
+          explorer.appendChild(renderTree(tree));
+        } else {
+          explorer.textContent = data.error || 'No files';
+        }
+      });
+    </script>
+  </body>
+</html>
