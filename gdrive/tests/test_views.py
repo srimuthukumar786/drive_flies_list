@@ -6,7 +6,7 @@ pytestmark = pytest.mark.django_db
 
 def test_home_view(client):
     response = client.get(reverse("home"))
-    assert response.status_code != 200
+    assert response.status_code == 200
     assert b"<html" in response.content.lower()
 
 def test_list_drive_files_missing_param(client):
